@@ -62,17 +62,20 @@ export default function Register() {
     }
   };
 
-  const defaultProfilePicture = (): string => {
-    return `data:image/svg+xml,${encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-        <rect width="128" height="128" fill="#e2e8f0" />
-        <circle cx="64" cy="64" r="40" fill="#a0aec0" />
-        <circle cx="64" cy="48" r="16" fill="#e2e8f0" />
-        <path d="M44 92 A40 40 0 0 0 84 92" fill="#e2e8f0" />
-      </svg>
-    `)}`;
-  };
+  const DEFAULT_PROFILE_SVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <circle cx="50" cy="50" r="50" fill="#e0e0e0"/>
+    <circle cx="50" cy="40" r="20" fill="#a0a0a0"/>
+    <path d="M30 80 Q50 70 70 80" stroke="#a0a0a0" stroke-width="10" fill="none"/>
+  </svg>
+  `;
 
+  const defaultProfilePicture = (): string => {
+    return `data:image/svg+xml,${encodeURIComponent(
+      DEFAULT_PROFILE_SVG.trim()
+    )}`;
+    };
+    
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
