@@ -1,20 +1,28 @@
 import { NextResponse } from 'next/server';
+import clientPromise from '../../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 
-// GET: Fetch employee profile
+function isValidObjectId(id: string): boolean {
+  return ObjectId.isValid(id) && (new ObjectId(id)).toString() === id;
+}
+
 export async function GET(request: Request) {
   try {
-    // Here you would typically:
-    // 1. Authenticate the request
-    // 2. Fetch the user's profile from the database
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
-    // For this example, we'll return a mock profile
-    const profile = {
-      id: '1',
-      username: 'johndoe',
-      email: 'john@example.com',
-      name: 'John Doe',
-      position: 'Software Developer'
-    };
+    if (!id || !isValidObjectId(id)) {
+      return NextResponse.json({ error: 'Invalid Profile ID' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db("employeeManagement");
+
+    const profile = await db.collection("profiles").findOne({ _id: new ObjectId(id) });
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
 
     return NextResponse.json(profile);
   } catch (error) {
@@ -23,17 +31,46 @@ export async function GET(request: Request) {
   }
 }
 
-// PUT: Update employee profile
 export async function PUT(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
     const updates = await request.json();
 
-    // Here you would typically:
-    // 1. Authenticate the request
-    // 2. Validate the input
-    // 3. Update the user's profile in the database
+    if (!id || !isValidObjectId(id)) {
+      return NextResponse.json({ error: 'Invalid Profile ID' }, { status: 400 });
+    }
 
-    // For this example, we'll just return a success message
+    // Validate the updates object
+    if (!updates || typeof updates !== 'object' || Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'Invalid update data' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db("employeeManagement");
+
+    // Only update allowed fields
+    const allowedFields = ['username', 'email', 'phonenumber'];
+    const filteredUpdates = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .reduce<Record<string, any>>((obj, key) => {
+        obj[key] = updates[key];
+        return obj;
+      }, {});
+
+    const result = await db.collection("profiles").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { ...filteredUpdates, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (result.modifiedCount === 0) {
+      return NextResponse.json({ message: 'No changes were made to the profile' });
+    }
+
     return NextResponse.json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -41,14 +78,24 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE: Delete employee profile
 export async function DELETE(request: Request) {
   try {
-    // Here you would typically:
-    // 1. Authenticate the request
-    // 2. Delete the user's profile from the database
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
-    // For this example, we'll just return a success message
+    if (!id || !isValidObjectId(id)) {
+      return NextResponse.json({ error: 'Invalid Profile ID' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db("employeeManagement");
+
+    const result = await db.collection("profiles").deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
     return NextResponse.json({ message: 'Profile deleted successfully' });
   } catch (error) {
     console.error('Error deleting profile:', error);
